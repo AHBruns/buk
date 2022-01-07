@@ -1,4 +1,6 @@
 class Books::ShelfService < Patterns::Service
+  include Failable
+
   def initialize(account:, book:, cell: nil, index: nil)
     @account = account
     @book = book

@@ -8,5 +8,6 @@ class Account < ApplicationRecord
   has_many :items, dependent: :restrict_with_error
   has_many :books, dependent: :restrict_with_error
 
-  validates :email, uniqueness: true
+  validates :email, presence: true, uniqueness: true
+  validates :password, presence: true, on: :create
 end

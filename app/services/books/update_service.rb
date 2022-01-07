@@ -1,4 +1,6 @@
 class Books::UpdateService < Patterns::Service
+  include Failable
+
   def initialize(book:, isbn: nil)
     @book = book
     @isbn = isbn

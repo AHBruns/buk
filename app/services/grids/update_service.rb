@@ -1,4 +1,6 @@
 class Grids::UpdateService < Patterns::Service
+  include Failable
+
   def initialize(grid:, name: nil)
     @grid = grid
     @name = name

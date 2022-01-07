@@ -40,12 +40,12 @@ class BooksController < ApplicationController
   end
 
   def move
-    moveBookService = Books::MoveService.call(**move_params)
+    move_book_service = Books::MoveService.call(**move_params)
 
-    if (moveBookService.result[:succeeded])
-      render json: moveBookService.result[:book]
+    if (move_book_service.result[:succeeded])
+      render json: move_book_service.result[:book]
     else
-      render status: :bad_request, json: { errors: moveBookService.result[:book].errors }
+      render status: :bad_request, json: { errors: move_book_service.result[:book].errors }
     end
   end
 
@@ -88,28 +88,25 @@ class BooksController < ApplicationController
   def create_params
     {
       account: @account_ctx,
-      **params.permit(:isbn).to_h.symbolize_keys
+      isbn: params.require(:isbn)
     }
   end
 
   def create_and_shelf_params
-    cell = Cells::ReadService.call(account: @account_ctx, id: params[:cell_id], first: true).result if params[:cell_id].present?
-
     {
       account: @account_ctx,
-      cell: cell,
-      **params.permit(:isbn, :index).to_h.symbolize_keys
+      cell: Cells::ReadService.call(account: @account_ctx, id: params.require(:cell_id), first: true).result,
+      index: params.require(:index),
+      isbn: params.require(:isbn)
     }
   end
 
   def shelf_params
-    cell = Cells::ReadService.call(account: @account_ctx, id: params[:cell_id], first: true).result if params[:cell_id].present?
-
     {
       account: @account_ctx,
       book: Books::ReadService.call(**read_params).result,
-      cell: cell,
-      **params.permit(:index).to_h.symbolize_keys
+      cell: Cells::ReadService.call(account: @account_ctx, id: params.require(:cell_id), first: true).result,
+      index: params.require(:index)
     }
   end
 
@@ -118,12 +115,10 @@ class BooksController < ApplicationController
   end
 
   def move_params
-    cell = Cells::ReadService.call(account: @account_ctx, id: params[:cell_id], first: true).result if params[:cell_id].present?
-
     {
       book: Books::ReadService.call(**read_params).result,
-      cell: cell,
-      **params.permit(:index).to_h.symbolize_keys
+      cell: Cells::ReadService.call(account: @account_ctx, id: params.require(:cell_id), first: true).result,
+      index: params.require(:index)
     }
   end
 
@@ -141,21 +136,15 @@ class BooksController < ApplicationController
   def read_params
     {
       account: @account_ctx,
-      id: params[:id] || -1,
+      id: params.require(:id),
       first: true
     }
   end
 
   def list_params
-    cell = Cells::ReadService.call(account: @account_ctx, id: params[:cell_id], first: true).result if params[:cell_id].present?
-    grid = @account_ctx.grids.find_by(id: params[:grid_id]) if params[:grid_id].present? # todo
-
     {
       account: @account_ctx,
-      item: nil, # not currently exposing items as addressable objects
-      cell: cell,
-      grid: grid,
-      **params.permit(:isbn, :index).to_h.symbolize_keys,
+      **params.permit(:isbn, :index, :cell_id, :grid_id).to_h.symbolize_keys,
     }
   end
 end

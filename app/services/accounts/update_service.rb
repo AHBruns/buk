@@ -1,24 +1,32 @@
 class Accounts::UpdateService < Patterns::Service
-  def initialize(account:, email: nil, password: nil)
+  include Failable
+
+  def initialize(account: nil, email: nil, password: nil)
     @account = account
     @email = email
     @password = password
   end
 
   def call
-    succeeded = false
+    add_error "AccountBlank" if @account.blank?
 
-    TransactionService.call(
-      Proc.new do
-        succeeded = true if @account.update({ email: @email, password: @password }.compact)
-      end
-    )
+    return failure if has_errors?
 
-    {
-      succeeded: succeeded,
-      account: @account
-    }
+    success({
+      account: TransactionService.call(
+        Proc.new do
+          @account.update!({ email: @email, password: @password }.compact)
+          @account
+        end
+      ).result
+    })
+  rescue ActiveRecord::RecordInvalid => invalid
+    add_record_error_handler(type: :taken, attribute: :email, error: "EmailTaken")
+    add_record_error_handler(type: :blank, attribute: :email, error: "EmailBlank")
+    add_record_error_handler(type: :blank, attribute: :password, error: "PasswordBlank")
+
+    handle_record_errors invalid.record
+
+    failure
   end
-
-  attr_reader :succeeded
 end

@@ -51,6 +51,34 @@ class AuthFlowsTest < ActionDispatch::IntegrationTest
   test "change password" do
     authenticate
 
-    successful_authenticated_post("/accounts/update", params: { email: "newTestPassword" })
+    successful_authenticated_post("/accounts/update", params: { password: "newTestPassword" })
+  end
+
+  test "empty password doesn't work" do
+    post "/accounts/create", params: { email: "testEmail", password: "" }
+    assert_response_failed
+  end
+
+  test "missing password doesn't work" do
+    post "/accounts/create", params: { email: "testEmail" }
+    assert_response_failed
+  end
+
+  test "empty email doesn't work" do
+    post "/accounts/create", params: { email: "", password: "testPassword" }
+    assert_response_failed
+  end
+
+  test "missing email doesn't work" do
+    post "/accounts/create", params: { password: "testPassword" }
+    assert_response_failed
+  end
+
+  test "serializer is working" do
+    post "/accounts/create", params: { email: "testEmail", password: "testPassword" }
+    assert_response_success
+    assert_not_nil @response.parsed_body["id"]
+    assert_equal @response.parsed_body["email"], "testEmail"
+    assert_nil @response.parsed_body["password"]
   end
 end

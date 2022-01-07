@@ -11,7 +11,7 @@ class AccountsController < ApplicationController
     if (create_account_service.result[:succeeded])
       render json: create_account_service.result[:account]
     else
-      render status: :bad_request, json: { errors: create_account_service.result[:account].errors }
+      render status: :bad_request, json: { errors: create_account_service.result[:errors] }
     end
   end
 
@@ -24,7 +24,7 @@ class AccountsController < ApplicationController
         BEARER_TOKEN: create_and_login_account_service.result[:token]
       }
     else
-      render status: :bad_request, json: { errors: create_and_login_account_service.result[:account].errors }
+      render status: :bad_request, json: { errors: create_and_login_account_service.result[:errors] }
     end
   end
 
@@ -34,7 +34,7 @@ class AccountsController < ApplicationController
     if (update_account_service.result[:succeeded])
       render json: update_account_service.result[:account]
     else
-      render status: :bad_request, json: { errors: update_account_service.result[:account].errors }
+      render status: :bad_request, json: { errors: update_account_service.result[:errors] }
     end
   end
 
@@ -47,7 +47,7 @@ class AccountsController < ApplicationController
         BEARER_TOKEN: login_service.result[:token]
       }
     else
-      render status: :bad_request, json: { errors: ["WrongCredentials"] }
+      render status: :bad_request, json: { errors: login_service.result[:errors] }
     end
   end
 

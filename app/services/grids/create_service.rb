@@ -1,4 +1,6 @@
 class Grids::CreateService < Patterns::Service
+  include Failable
+
   def initialize(account:, name:)
     @account = account
     @name = name

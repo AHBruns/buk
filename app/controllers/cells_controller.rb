@@ -10,7 +10,13 @@ class CellsController < ApplicationController
   end
 
   def read
-    render json: load_cell
+    cell = Cells::ReadService.call(**read_params).result
+
+    if cell.present?
+      render json: cell
+    else
+      render status: :bad_request, json: { errors: ["No cell by that id."] }
+    end
   end
 
   def update
@@ -45,26 +51,34 @@ class CellsController < ApplicationController
   private
 
   def load_cell
-    @account_ctx.cells.find_by(id: params[:id])
+    Cells::ReadService.call(**read_params).result
   end
 
   def load_grid
-    @account_ctx.grids.find_by(id: params[:grid_id])
+    @account_ctx.grids.find_by(id: params.require(:grid_id))
   end
 
   def create_params
     {
       account: @account_ctx,
       grid: load_grid,
-      **params.permit(:x, :y).to_h.symbolize_keys      
+      x: params.require(:x),
+      y: params.require(:y)
     }
   end
 
   def update_params
     {
-      cell: load_cell,
-      grid: load_grid,
-      **params.permit(:x, :y).to_h.symbolize_keys
+      cell: Cells::ReadService.call(**read_params).result,
+      **params.permit(:x, :y, :grid_id).to_h.symbolize_keys
+    }
+  end
+
+  def read_params
+    {
+      account: @account_ctx,
+      id: params.require(:id),
+      first: true
     }
   end
 end

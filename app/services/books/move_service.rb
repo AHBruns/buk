@@ -1,4 +1,6 @@
 class Books::MoveService < Patterns::Service
+  include Failable
+
   def initialize(book:, index: nil, cell: nil)
     @book = book
     @index = index
@@ -14,8 +16,6 @@ class Books::MoveService < Patterns::Service
         succeeded = true if item.update(index: @index, cell: @cell)
       end
     )
-
-    @book.errors.merge!(item)
     
     {
       succeeded: succeeded,

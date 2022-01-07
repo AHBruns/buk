@@ -1,22 +1,28 @@
 class Accounts::LoginService < Patterns::Service
+  include Failable
+
   def initialize(email: nil, password: nil)
     @email = email
     @password = password
   end
 
   def call
-    account = Account.find_by_email(@email)
+    add_error "EmailBlank" if @email.blank?
+    add_error "PasswordBlank" if @password.blank?
+
+    return failure if has_errors?
+
+    account = Account.find_by(email: @email)
 
     if (account&.authenticate(@password))
-      {
+      success({
         token: JWT.encode({ account_id: account.id }, ENV["jwt_secret"]),
-        succeeded: true,
         account: account
-      }
+      })
     else
-      {
-        succeeded: false,
-      }
+      add_error "NoCorrespondingAccount" if account.blank?
+
+      failure
     end
   end
 end

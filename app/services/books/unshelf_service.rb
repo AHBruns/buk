@@ -1,4 +1,6 @@
 class Books::UnshelfService < Patterns::Service
+  include Failable
+
   def initialize(book:)
     @book = book
   end

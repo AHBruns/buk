@@ -1,9 +1,15 @@
 class Cells::UpdateService < Patterns::Service
-  def initialize(cell:, x: nil, y: nil, grid: nil)
+  include Failable
+
+  def initialize(cell:, x: nil, y: nil, grid: nil, grid_id: nil)
     @cell = cell
     @x = x
     @y = y
-    @grid = grid
+    @grid = if grid.present?
+      grid
+    else
+      Grid.find_by(id: grid_id)
+    end
   end
 
   def call

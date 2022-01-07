@@ -1,4 +1,6 @@
 class Cells::CreateService < Patterns::Service
+  include Failable
+
   def initialize(account:, x: nil, y: nil, grid: nil)
     @account = account
     @x = x

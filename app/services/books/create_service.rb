@@ -1,4 +1,6 @@
 class Books::CreateService < Patterns::Service
+  include Failable
+
   def initialize(account:, isbn: nil)
     @account = account
     @isbn = isbn
