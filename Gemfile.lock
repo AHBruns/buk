@@ -177,10 +177,6 @@ GEM
       ffi (~> 1.0)
     rexml (3.2.5)
     ruby2_keywords (0.0.5)
-    sorbet (0.5.9482)
-      sorbet-static (= 0.5.9482)
-    sorbet-runtime (0.5.9482)
-    sorbet-static (0.5.9482-universal-darwin-21)
     spring (3.1.1)
     sprockets (4.0.2)
       concurrent-ruby (~> 1.0)
@@ -226,8 +222,6 @@ DEPENDENCIES
   rack-cors
   rails (~> 6.1.4, >= 6.1.4.1)
   rails-patterns
-  sorbet
-  sorbet-runtime
   spring
   tzinfo-data
   webmock

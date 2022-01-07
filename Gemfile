@@ -15,7 +15,6 @@ gem 'tzinfo-data', platforms: [:mingw, :mswin, :x64_mingw, :jruby]
 gem 'rails-patterns'
 gem 'active_model_serializers'
 gem 'http'
-gem 'sorbet-runtime'
 
 group :development, :test do
   gem 'byebug', platforms: [:mri, :mingw, :x64_mingw]
@@ -24,7 +23,6 @@ end
 group :development do
   gem 'listen', '~> 3.3'
   gem 'spring'
-  gem 'sorbet'
 end
 
 group :test do
