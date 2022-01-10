@@ -14,7 +14,7 @@ class ActiveSupport::TestCase
 
   WebMock.disable_net_connect!(allow_localhost: true)
 
-  # parallelize(workers: :number_of_processors)
+  parallelize(workers: :number_of_processors)
 
   fixtures :all
 

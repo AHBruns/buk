@@ -1,5 +1,8 @@
 require "test_helper"
 
+# todo: test with more api responses
+# todo: test metadata in responses
+
 class BookFlowsTest < ActionDispatch::IntegrationTest
   include AuthMethods
   include BookMethods
