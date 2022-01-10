@@ -1,6 +1,4 @@
-require "test_helper"
-
-module IntegrationHelpers
+module AuthMethods
   def authenticate(email: "testEmail", password: "testPassword")
     post "/accounts/create_and_login", params: { email: email, password: password }
     assert_response :success

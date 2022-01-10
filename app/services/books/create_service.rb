@@ -1,35 +1,36 @@
+# todo : break out book creation into service and rename to something like Books::CreateAndGoogleBooksService
+
 class Books::CreateService < Patterns::Service
   include Failable
 
-  def initialize(account:, isbn: nil)
+  def initialize(account: nil, isbn: nil)
     @account = account
     @isbn = isbn
   end
 
   def call
-    succeeded = false
-    new_book = @account.books.new(isbn: @isbn)
-    request = nil
+    add_error "AccountBlank" if @account.blank?
+    add_error "WrongAccountClass" unless @account.blank? || @account.is_a?(Account) || @account.acts_like?(:account)
 
-    TransactionService.call(
-      Proc.new do
-        raise ActiveRecord::Rollback unless new_book.save
+    return failure if has_errors?
 
-        google_book_service = GoogleBooksService.call(isbn: @isbn)
+    success({
+      book: TransactionService.call(
+        Proc.new do
+          book = @account.books.new(isbn: @isbn)
+          book.save!
+          join_service(GoogleBooksService.call(isbn: @isbn))
+          book
+        end
+      ).result
+    })
+  rescue ActiveRecord::RecordInvalid => invalid
+    add_record_error_handler(type: :blank, attribute: :isbn, error: "ISBNBlank")
 
-        request = google_book_service.result[:request]
+    handle_record_errors invalid.record
 
-        raise ActiveRecord::Rollback unless google_book_service.result[:succeeded]
-
-        succeeded = true
-      end
-    )
-
-    new_book.errors.merge!(request) if request.present?
-
-    {
-      succeeded: succeeded,
-      book: new_book
-    }
+    failure
+  rescue Exceptions::RollbackAndRaise
+    failure
   end
 end

@@ -1,25 +1,28 @@
 class Books::UnshelfService < Patterns::Service
   include Failable
 
-  def initialize(book:)
+  def initialize(book: nil)
     @book = book
   end
 
   def call
-    succeeded = false
-    item = @book.item
+    add_error "BookBlank" if @book.blank?
+    add_error "WrongBookClass" unless @book.blank? || @book.is_a?(Book) || @book.acts_like?(:book)
+    add_error "AlreadyUnshelved" if @book&.item&.blank?
 
-    TransactionService.call(
-      Proc.new do
-        succeeded = true if item.blank? || item.destroy
-      end
-    )
+    return failure if has_errors?
 
-    @book.errors.merge!(item)
+    success({
+      book: TransactionService.call(
+        Proc.new do
+          @book.item.destroy!
+          @book.reload
+        end
+      ).result
+    })
+  rescue ActiveRecord::RecordNotDestroyed => invalid
+    handle_record_errors invalid.record
 
-    {
-      succeeded: succeeded,
-      book: @book
-    }
+    failure
   end
 end

@@ -22,7 +22,31 @@ class ApplicationController < ActionController::API
 
   def require_account_ctx
     unless @account_ctx
-      render status: :unauthorized, json: { errors: ["Missing account context (not logged in)."] }
+      render status: :unauthorized, json: { errors: ["NotLoggedIn"] }
     end
+  end
+
+  def respond_with_failable_service(service, on_success:)
+    result = service.result
+
+    if result[:succeeded]
+      render json: on_success.respond_to?(:call) ? on_success.call(result) : result[on_success]
+    else
+      render status: :bad_request, json: { errors: result[:errors] }
+    end
+  end
+
+  def respond_with_lookup_service(service)
+    record = service.result
+
+    if record.present?
+      render json: record
+    else
+      render status: :bad_request, json: { errors: ["NoRecord"] }
+    end
+  end
+
+  def respond_with_list_service(service)
+    render json: service.result
   end
 end

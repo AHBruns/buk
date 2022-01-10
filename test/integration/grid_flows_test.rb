@@ -1,28 +1,107 @@
-require_relative "integration_helpers"
-
 require "test_helper"
 
-class AuthFlowsTest < ActionDispatch::IntegrationTest
-  include IntegrationHelpers
+class GridFlowsTest < ActionDispatch::IntegrationTest
+  include AuthMethods
+  include GridMethods
+  include CellMethods
 
-  test "simple 4x4" do
+  setup do
     authenticate
+  end
 
-    grid_id = successful_authenticated_post("/grids/create", params: { name: "testGrid" })["id"]
+  test "create a grid" do
+    grid = successful_authenticated_post(
+      "/grids/create",
+      params: { name: "testGrid" }
+    )
+  end
 
-    cell_ids = Set[]
-    2.times do |x|
-      2.times do |y|
-        cell_ids << successful_authenticated_post("/cells/create", params: { x: x, y: y, grid_id: grid_id })["id"]
-      end
-    end
+  test "read a grid" do
+    grid = generate_grid
+    assert_equal(
+      grid,
+      successful_authenticated_post(
+        "/grids/read",
+        params: { id: grid["id"] }
+      )
+    )
+  end
 
-    successful_authenticated_post("/grids/read", params: { id: grid_id })
+  test "update a grid" do
+    grid = generate_grid
+    updated_grid = successful_authenticated_post(
+      "/grids/update",
+      params: { id: grid["id"], name: "newName" }
+    )
+    assert_equal(
+      {
+        **grid,
+        "name" => "newName",
+        "updated_at" => updated_grid["updated_at"]
+      },
+      updated_grid
+    )
+  end
 
-    assert_equal "testGrid", @response.parsed_body["name"]
+  test "destroy a grid" do
+    grid = generate_grid
+    assert_equal(
+      grid,
+      successful_authenticated_post(
+        "/grids/destroy",
+        params: { id: grid["id"] }
+      )
+    )
+    failed_authenticated_post("/grids/read", params: { id: grid["id"] })
+  end
 
-    successful_authenticated_post("/cells/list", params: { grid_id: grid_id })
+  test "can't destroy a grid with cells" do
+    grid = generate_grid
+    cell = generate_cell(grid_id: grid["id"])
+    assert_equal(
+      { "errors"=>["CellsDependency"] },
+      failed_authenticated_post("/grids/destroy", params: { id: grid["id"] })
+    )
+    successful_authenticated_post("/cells/destroy", params: { id: cell["id"] })
+    assert_equal(
+      grid,
+      successful_authenticated_post(
+        "/grids/destroy",
+        params: { id: grid["id"] }
+      )
+    )
+    failed_authenticated_post("/grids/read", params: { id: grid["id"] })
+  end
 
-    assert_equal cell_ids, @response.parsed_body.map{ |cell| cell["id"] }.to_set
+  test "can't create two grids with the same name" do
+    grid = successful_authenticated_post(
+      "/grids/create",
+      params: { name: "testGrid" }
+    )
+    assert_equal(
+      { "errors"=>["NameTaken"] },
+      failed_authenticated_post(
+        "/grids/create",
+        params: { name: "testGrid" }
+      )
+    )
+  end
+
+  test "can't update a grid to the same name as an existing grid" do
+    grid_1 = successful_authenticated_post(
+      "/grids/create",
+      params: { name: "testGrid1" }
+    )
+    grid_2 = successful_authenticated_post(
+      "/grids/create",
+      params: { name: "testGrid2" }
+    )
+    assert_equal(
+      { "errors"=>["NameTaken"] },
+      failed_authenticated_post(
+        "/grids/update",
+        params: { id: grid_2["id"], name: "testGrid1" }
+      )
+    )
   end
 end

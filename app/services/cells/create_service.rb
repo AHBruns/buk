@@ -1,7 +1,7 @@
 class Cells::CreateService < Patterns::Service
   include Failable
 
-  def initialize(account:, x: nil, y: nil, grid: nil)
+  def initialize(account: nil, x: nil, y: nil, grid: nil)
     @account = account
     @x = x
     @y = y
@@ -9,18 +9,35 @@ class Cells::CreateService < Patterns::Service
   end
 
   def call
-    succeeded = false
-    new_cell = @account.cells.new(x: @x, y: @y, grid: @grid)
+    add_error "AccountBlank" if @account.blank?
+    unless (
+      @account.blank? ||
+      @account.is_a?(Account) ||
+      @account.acts_like?(:account)
+    )
+      add_error "WrongAccountClass" 
+    end
 
-    TransactionService.call(
-      Proc.new do
-        succeeded = true if new_cell.save
-      end
+    return failure if has_errors?
+
+    success({
+      cell: TransactionService.call(
+        Proc.new do
+          cell = @account.cells.new(x: @x, y: @y, grid: @grid)
+          cell.save!
+          cell
+        end
+      ).result
+    })
+  rescue ActiveRecord::RecordInvalid => invalid
+    add_record_error_handler(
+      type: :taken,
+      attribute: :grid_id,
+      error: "LocationTaken"
     )
 
-    {
-      succeeded: succeeded,
-      cell: new_cell
-    }
+    handle_record_errors invalid.record
+
+    failure
   end
 end

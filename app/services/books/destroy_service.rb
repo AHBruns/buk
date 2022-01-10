@@ -1,22 +1,26 @@
 class Books::DestroyService < Patterns::Service
   include Failable
 
-  def initialize(book:)
+  def initialize(book: nil)
     @book = book
   end
 
   def call
-    succeeded = false
+    add_error "BookBlank" if @book.blank?
+    add_error "WrongBookClass" unless @book.blank? || @book.is_a?(Book) || @book.acts_like?(:book)
 
-    TransactionService.call(
-      Proc.new do
-        succeeded = true if @book.destroy
-      end
-    )
+    return failure if has_errors?
 
-    {
-      succeeded: succeeded,
-      book: @book
-    }
+    success({
+      book: TransactionService.call(
+        Proc.new do
+          @book.destroy!
+        end
+      ).result
+    })
+  rescue ActiveRecord::RecordNotDestroyed => invalid
+    handle_record_errors invalid.record
+
+    failure
   end
 end

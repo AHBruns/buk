@@ -15,34 +15,26 @@ class Books::ReadService < Patterns::Service
     @account = account
     @id = id
     @isbn = isbn
-    @grid_id = if grid.present?
-      grid.id
-    else
-      grid_id
-    end
-    @cell_id = if cell.present?
-      cell.id
-    else
-      cell_id
-    end
-    @item = if item.present?
-      item
-    elsif item_id.present?
-      Item.find_by(id: item_id)
-    else
-      nil
-    end
+    @item = item
+    @item_id = item_id
+    @cell = cell
+    @cell_id = cell_id
     @index = index
+    @grid = grid
+    @grid_id = grid_id
     @first = first
   end
 
-  def call    
+  def call
     books = @account.books
     books = books.where(id: @id) if @id.present?
     books = books.where(isbn: @isbn) if @isbn.present?
     books = books.where(items: @item) if @item.present?
+    books = books.where(items: Item.find_by(id: @item_id)) if @item_id.present?
+    books = books.joins(:item).where(items: { cell: @cell }) if @cell.present?
     books = books.joins(:item).where(items: { cell_id: @cell_id }) if @cell_id.present?
-    books = books.joins(item: [:cell]).where(items: { cells: { index: @index } }) if @index.present?
+    books = books.joins(:item).where(items: { index: @index }) if @index.present?
+    books = books.joins(item: [:cell]).where(items: { cells: { grid: @grid } }) if @grid.present?
     books = books.joins(item: [:cell]).where(items: { cells: { grid_id: @grid_id } }) if @grid_id.present?
     books = books.first if @first
     

@@ -1,89 +1,45 @@
 class BooksController < ApplicationController
   def create
-    create_book_service = Books::CreateService.call(**create_params)
-
-    if (create_book_service.result[:succeeded])
-      render json: create_book_service.result[:book]
-    else
-      render status: :bad_request, json: { errors: create_book_service.result[:book].errors }
-    end
+    respond_with_failable_book_service Books::CreateService.call(**create_params)
   end
 
   def create_and_shelf
-    create_and_shelf_service = Books::CreateAndShelfService.call(**create_and_shelf_params)
-
-    if (create_and_shelf_service.result[:succeeded])
-      render json: create_and_shelf_service.result[:book]
-    else
-      render status: :bad_request, json: { errors: create_and_shelf_service.result[:book].errors }
-    end
+    respond_with_failable_book_service Books::CreateAndShelfService.call(**create_and_shelf_params)
   end
     
   def shelf
-    shelf_book_service = Books::ShelfService.call(**shelf_params)
-
-    if (shelf_book_service.result[:succeeded])
-      render json: shelf_book_service.result[:book]
-    else
-      render status: :bad_request, json: { errors: shelf_book_service.result[:book].errors }
-    end
+    respond_with_failable_book_service Books::ShelfService.call(**shelf_params)
   end
 
   def unshelf
-    unshelf_book_service = Books::UnshelfService.call(**unshelf_params)
-
-    if (unshelf_book_service.result[:succeeded])
-      render json: unshelf_book_service.result[:book]
-    else
-      render status: :bad_request, json: { errors: unshelf_book_service.result[:book].errors }
-    end
+    respond_with_failable_book_service Books::UnshelfService.call(**unshelf_params)
   end
 
   def move
-    move_book_service = Books::MoveService.call(**move_params)
-
-    if (move_book_service.result[:succeeded])
-      render json: move_book_service.result[:book]
-    else
-      render status: :bad_request, json: { errors: move_book_service.result[:book].errors }
-    end
+    respond_with_failable_book_service Books::MoveService.call(**move_params)
   end
 
   def read
-    book = Books::ReadService.call(**read_params).result
-
-    if book.present?
-      render json: book
-    else
-      render status: :bad_request, json: { errors: ["No book by that id."] }
-    end
+    respond_with_lookup_service Books::ReadService.call(**read_params)
   end
 
   def update
-    update_book_service = Books::UpdateService.call(**update_params)
-    
-    if update_book_service.result[:succeeded]
-      render json: update_book_service.result[:book]
-    else
-      render status: :bad_request, json: { errors: update_book_service.result[:book].errors }
-    end
+    respond_with_failable_book_service Books::UpdateService.call(**update_params)
   end
 
   def destroy
-    destroy_book_service = Books::DestroyService.call(**destroy_params)
-
-    if destroy_book_service.result[:succeeded]
-      render json: destroy_book_service.result[:book]
-    else
-      render status: :bad_request, json: { errors: destroy_book_service.result[:book].errors }
-    end
+    respond_with_failable_book_service Books::DestroyService.call(**destroy_params)
   end
 
   def list    
-    render json: Books::ReadService.call(**list_params).result
+    respond_with_list_service Books::ReadService.call(**list_params)
   end
 
   private
+
+  def respond_with_failable_book_service(service)
+    respond_with_failable_service service, on_success: :book
+  end
 
   def create_params
     {

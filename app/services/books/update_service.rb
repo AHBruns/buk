@@ -1,32 +1,33 @@
 class Books::UpdateService < Patterns::Service
   include Failable
 
-  def initialize(book:, isbn: nil)
+  def initialize(book: nil, isbn: nil)
     @book = book
     @isbn = isbn
   end
 
   def call
-    succeeded = false
-    request = nil
+    add_error "BookBlank" if @book.blank?
+    add_error "WrongBookClass" unless @book.blank? || @book.is_a?(Book) || @book.acts_like?(:book)
 
-    TransactionService.call(
-      Proc.new do
-        raise ActiveRecord::Rollback unless @book.update(isbn: @isbn)
+    return failure if has_errors?
 
-        google_book_service = GoogleBooksService.call(isbn: @isbn)
+    success({
+      book: TransactionService.call(
+        Proc.new do
+          @book.update!({ isbn: @isbn }.compact)
+          join_service(GoogleBooksService.call(isbn: @isbn))
+          @book
+        end
+      ).result
+    })
+  rescue ActiveRecord::RecordInvalid => invalid
+    add_record_error_handler(type: :blank, attribute: :isbn, error: "ISBNBlank")
 
-        request = google_book_service.result[:request]
+    handle_record_errors invalid.record
 
-        raise ActiveRecord::Rollback unless google_book_service.result[:succeeded]
-
-        succeeded = true
-      end
-    )
-
-    {
-      succeeded: succeeded,
-      book: @book
-    }
+    failure
+  rescue Exceptions::RollbackAndRaise
+    failure
   end
 end

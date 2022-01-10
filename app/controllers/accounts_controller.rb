@@ -1,65 +1,60 @@
 class AccountsController < ApplicationController
-  skip_before_action :require_account_ctx, only: [:create, :create_and_login, :login]
+  skip_before_action(
+    :require_account_ctx,
+    only: [:create, :create_and_login, :login]
+  )
 
   def me
     render json: @account_ctx
   end
 
   def create
-    create_account_service = Accounts::CreateService.call(**create_params)
-
-    if (create_account_service.result[:succeeded])
-      render json: create_account_service.result[:account]
-    else
-      render status: :bad_request, json: { errors: create_account_service.result[:errors] }
-    end
+    respond_with_failable_account_service(
+      Accounts::CreateService.call(**create_params)
+    )
   end
 
   def create_and_login
-    create_and_login_account_service = Accounts::CreateAndLoginService.call(**create_params)
-
-    if (create_and_login_account_service.result[:succeeded])
-      render json: {
-        account: create_and_login_account_service.result[:account],
-        BEARER_TOKEN: create_and_login_account_service.result[:token]
-      }
-    else
-      render status: :bad_request, json: { errors: create_and_login_account_service.result[:errors] }
-    end
+    respond_with_failable_service(
+      Accounts::CreateAndLoginService.call(**create_params),
+      on_success: Proc.new do |result|
+        {
+          account: AccountSerializer.new(result[:account]).as_json,
+          BEARER_TOKEN: result[:token]
+        }
+      end
+    )
   end
 
   def update
-    update_account_service = Accounts::UpdateService.call(**update_params)
-
-    if (update_account_service.result[:succeeded])
-      render json: update_account_service.result[:account]
-    else
-      render status: :bad_request, json: { errors: update_account_service.result[:errors] }
-    end
+    respond_with_failable_account_service(
+      Accounts::UpdateService.call(**update_params)
+    )
   end
 
   def login
-    login_service = Accounts::LoginService.call(**login_params)
-
-    if (login_service.result[:succeeded])
-      render json: {
-        account: login_service.result[:account],
-        BEARER_TOKEN: login_service.result[:token]
-      }
-    else
-      render status: :bad_request, json: { errors: login_service.result[:errors] }
-    end
+    respond_with_failable_service(
+      Accounts::LoginService.call(**login_params),
+      on_success: Proc.new do |result|
+        {
+          account: AccountSerializer.new(result[:account]).as_json,
+          BEARER_TOKEN: result[:token]
+        }
+      end
+    )
   end
 
   def destroy
-    if (@account_ctx.destroy)
-      render json: @account_ctx
-    else
-      render status: :bad_request, json: { errors: @account_ctx.errors }
-    end
+    respond_with_failable_account_service(
+      Accounts::DestroyService.call(**destroy_params)
+    )
   end
 
   private
+
+  def respond_with_failable_account_service(service)
+    respond_with_failable_service service, on_success: :account
+  end
 
   def create_params
     params.permit(:email, :password).to_h.symbolize_keys
@@ -74,5 +69,9 @@ class AccountsController < ApplicationController
       account: @account_ctx,
       **params.permit(:email, :password).to_h.symbolize_keys
     }
+  end
+
+  def destroy_params
+    { account: @account_ctx }
   end
 end

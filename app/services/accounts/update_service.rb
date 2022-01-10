@@ -9,7 +9,8 @@ class Accounts::UpdateService < Patterns::Service
 
   def call
     add_error "AccountBlank" if @account.blank?
-
+    add_error "WrongAccountClass" unless @account.blank? || @account.is_a?(Account) || @account.acts_like?(:account)
+    
     return failure if has_errors?
 
     success({

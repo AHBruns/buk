@@ -24,15 +24,18 @@ module Failable
       get_errors.present?
     end
 
+    # todo : add api to handle restrict_dependent_destroy more gracefully (no proc)
+
     def add_record_error_handler(type:, attribute:, error:)
       @handlers ||= {}
       @handlers[type] ||= {}
       @handlers[type][attribute] = error
     end
 
-    def handle_record_errors(model)
-      model.errors.each do |error|
+    def handle_record_errors(record)
+      record.errors.each do |error|
         handled_error = (@handlers || {}).dig(error.type, error.attribute)
+        handled_error = handled_error.call(error) if handled_error.is_a?(Proc)
 
         raise Exceptions::UnhandledModelError.new(error) unless handled_error.present?
           
@@ -41,9 +44,9 @@ module Failable
     end
 
     def join_service(service) 
-      if service.failable?
+      if defined? service.failable? && service.failable?
         unless service.result[:succeeded]
-          errors << service.result[:errors]
+          add_errors *service.result[:errors]
           raise Exceptions::RollbackAndRaise
         end
       end
@@ -58,13 +61,21 @@ module Failable
     def failure
       { errors: get_errors, succeeded: false }
     end
+
+    def fail_with(*errors)
+      add_errors errors
+      failure
+    end
   end
 
   class_methods do
     def call(*args, **kwargs)
       service = super
 
-      raise Exceptions::ServiceFailedWithoutErrors.new(service: service) unless service.result[:succeeded] || service.result[:errors].present?
+      unless service.result[:succeeded] || service.result[:errors].present?
+        p service.result
+        raise Exceptions::ServiceFailedWithoutErrors.new(service: service)
+      end
 
       service
     end

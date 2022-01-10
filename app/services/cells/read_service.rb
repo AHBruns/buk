@@ -4,11 +4,8 @@ class Cells::ReadService < Patterns::Service
     @id = id
     @x = x
     @y = y
-    @grid_id = if grid.present?
-      grid.id
-    else
-      grid_id
-    end
+    @grid = grid
+    @grid_id = grid_id
     @first = first
   end
 
@@ -17,7 +14,8 @@ class Cells::ReadService < Patterns::Service
     cells = cells.where(id: @id) if @id.present?
     cells = cells.where(x: @x) if @x.present?
     cells = cells.where(y: @y) if @y.present?
-    cells = books.joins(item: [:cell]).where(items: { cells: { grid_id: grid_id } }) if @grid_id.present?
+    cells = cells.where(grid: @grid) if @grid.present?
+    cells = cells.where(grid_id: @grid_id) if @grid_id.present?
     cells = cells.first if @first
     
     cells

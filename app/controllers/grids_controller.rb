@@ -1,46 +1,34 @@
 class GridsController < ApplicationController
   def create
-    create_grid_service = Grids::CreateService.call(**create_params)
-
-    if (create_grid_service.result[:succeeded])
-      render json: create_grid_service.result[:grid]
-    else
-      render status: :bad_request, json: { errors: create_grid_service.result[:grid].errors }
-    end
+    respond_with_failable_grid_service(
+      Grids::CreateService.call(**create_params)
+    )
   end
 
   def read
-    render json: load_grid
+    respond_with_lookup_service Grids::ReadService.call(**read_params)
   end
 
   def update
-    update_grid_service = Grids::UpdateService.call(**update_params)
-
-    if (update_grid_service.result[:succeeded])
-      render json: update_grid_service.result[:grid]
-    else
-      render status: :bad_request, json: { errors: update_grid_service.result[:grid].errors }
-    end
+    respond_with_failable_grid_service(
+      Grids::UpdateService.call(**update_params)
+    )
   end
 
   def destroy
-    @grid = load_grid
-
-    if (@grid.destroy)
-      render json: @grid
-    else
-      render status: :bad_request, json: { errors: @grid.errors }
-    end
+    respond_with_failable_grid_service(
+      Grids::DestroyService.call(**destroy_params)
+    )
   end
 
   def list
-    render json: @account_ctx.grids
+    respond_with_list_service Grids::ReadService.call(**list_params)
   end
 
   private
 
-  def load_grid
-    @account_ctx.grids.find_by(id: params[:id])
+  def respond_with_failable_grid_service(service)
+    respond_with_failable_service service, on_success: :grid
   end
 
   def create_params
@@ -50,9 +38,28 @@ class GridsController < ApplicationController
     }
   end
 
+  def read_params
+    {
+      account: @account_ctx,
+      id: params.require(:id),
+      first: true
+    }
+  end
+
   def update_params
     {
-      grid: load_grid,
+      grid: Grids::ReadService.call(**read_params).result,
+      **params.permit(:name).to_h.symbolize_keys
+    }
+  end
+
+  def destroy_params
+    { grid: Grids::ReadService.call(**read_params).result }
+  end
+
+  def list_params
+    {
+      account: @account_ctx,
       **params.permit(:name).to_h.symbolize_keys
     }
   end
